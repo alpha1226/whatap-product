@@ -15,7 +15,6 @@ database.configure({
 /** 전체 상품 조회 */
 async function getProducts() {
   const result = await database.query(sql.getProducts).spread((rows) => rows)
-  console.log(result)
   return result
 }
 
@@ -25,7 +24,7 @@ async function getProduct(productIndex) {
     .query(sql.getProduct, [productIndex])
     .spread((rows) => rows)
 
-  return result.length === 1 ? result[0] : result
+  return result.length <= 1 ? result[0] : result
 }
 
 /** 상품 추가 */
@@ -48,4 +47,48 @@ async function addProduct(name, content, stock) {
   }
 }
 
-module.exports = { addProduct, getProducts, getProduct }
+/** 상품 정보 수정 */
+async function updateProduct(productIndex, name, content, stock, available) {
+  const result = await database
+    .query(sql.updateProduct, [name, content, stock, available, productIndex])
+    .spread((r) => r)
+
+  if (result.affectedRows === 0) {
+    return {
+      result: false,
+      message: '상품 정보 변경 실패',
+    }
+  }
+
+  const product = await getProduct(productIndex)
+  return {
+    result: true,
+    message: '상품 정보 변경 성공',
+    product,
+  }
+}
+
+/** 상품 삭제 */
+async function deleteProduct(productIndex) {
+  const result = await database
+    .query(sql.deleteProduct, [productIndex])
+    .spread((rows) => rows)
+
+  if (result.affectedRows === 0) {
+    return { result: false, message: '상품 삭제 실패' }
+  }
+
+  const product = await getProduct(productIndex)
+
+  if (product) return { result: false, message: '상품 삭제 실패' }
+
+  return { result: true, message: '상품 삭제 성공' }
+}
+
+module.exports = {
+  addProduct,
+  getProducts,
+  getProduct,
+  updateProduct,
+  deleteProduct,
+}

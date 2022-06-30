@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 const db = require('../service/db')
 const response = require('../service/response')
+const { checkNumber } = require('../util/typecheck')
 
 router.get('/getProducts', async (req, res) => {
   const products = await db.getProducts()
@@ -12,19 +13,26 @@ router.get('/getProducts', async (req, res) => {
 
 router.get('/getProduct/:productIndex', async (req, res) => {
   const { productIndex } = req.params
+
+  if (!productIndex) {
+    return response.badReq(res, '필수값이 없습니다')
+  }
+  if (!checkNumber(productIndex)) {
+    return response.badReq(res, 'productIndex is not number')
+  }
+
   const product = await db.getProduct(productIndex)
 
-  if (typeof product === typeof []) {
-    if (product.length === 0) {
-      return response.serverError(res, 'can not find product')
-    }
-    if (product.length > 1) {
-      return response.serverErrorWithObject(
-        res,
-        '!!!duplicate product index!!!',
-        product
-      )
-    }
+  if (product === undefined) {
+    return response.serverError(res, 'can not find product')
+  }
+
+  if (typeof product === typeof [] && product.length > 2) {
+    return response.serverErrorWithObject(
+      res,
+      '!!!duplicate product index!!!',
+      product
+    )
   }
 
   if (!product.available) {
@@ -36,22 +44,103 @@ router.get('/getProduct/:productIndex', async (req, res) => {
 
 router.post('/addProduct', async (req, res) => {
   const { name, content } = req.body
-  let { stock } = req.body
+  const { stock } = req.body
 
   if (!name || !content || !stock) {
     return response.badReq(res, '필수값이 없습니다')
   }
 
-  if (typeof stock !== 'number') {
-    stock = Number.parseInt(stock, 10)
-    if (Number.isNaN(stock)) {
-      return response.badReq(res, 'stock is not number')
-    }
+  if (!checkNumber(stock)) {
+    return response.badReq(res, 'stock is not number')
   }
 
-  const result = await db.addProduct(name, content, stock)
+  const insertResult = await db.addProduct(name, content, stock)
 
-  return response.json(res, result)
+  if (!insertResult.result) {
+    return response.serverErrorWithObject(
+      res,
+      'product insert fail',
+      insertResult
+    )
+  }
+
+  return response.json(res, insertResult)
+})
+
+router.put('/updateProduct/:productIndex', async (req, res) => {
+  const { productIndex } = req.params
+  const { name, content, stock } = req.query
+  let { available } = req.query
+
+  if (!name || !content || !stock || !available) {
+    return response.badReq(res, '필수값이 없습니다.')
+  }
+
+  if (!checkNumber(stock)) {
+    return response.badReq(res, 'stock is not number')
+  }
+  if (!checkNumber(productIndex)) {
+    return response.badReq(res, 'productIndex is not number')
+  }
+
+  try {
+    available = JSON.parse(available)
+    if (typeof available !== typeof true) {
+      throw new Error('wrong type on available')
+    }
+  } catch (e) {
+    return response.badReq(res, 'available is not boolean type')
+  }
+
+  const product = await db.getProduct(productIndex)
+
+  if (!product) {
+    return response.serverError(res, 'cannot find product')
+  }
+
+  const updateResult = await db.updateProduct(
+    productIndex,
+    name,
+    content,
+    stock,
+    available
+  )
+
+  if (!updateResult.result) {
+    return response.serverErrorWithObject(
+      res,
+      'product update fail',
+      updateResult
+    )
+  }
+
+  return response.json(updateResult)
+})
+
+router.delete('/deleteProduct/:productIndex', async (req, res) => {
+  const { productIndex } = req.params
+  console.log(req.params.productIndex)
+
+  if (!productIndex) {
+    return response.badReq(res, '필수값이 없습니다')
+  }
+  if (!checkNumber(productIndex)) {
+    return response.badReq(res, 'productIndex is not number')
+  }
+
+  const product = await db.getProduct(productIndex)
+
+  if (!product) {
+    return response.serverError(res, 'can not find product')
+  }
+
+  const deleteResult = await db.deleteProduct(productIndex)
+
+  if (deleteResult.reulst === false) {
+    return response.serverErrorWithObject(res, 'delete fail', deleteResult)
+  }
+
+  return response.json(res, deleteResult)
 })
 
 module.exports = router
