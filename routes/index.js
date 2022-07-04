@@ -6,6 +6,10 @@ const { getOrders } = require('../service/order')
 const response = require('../util/response')
 const { isNumber } = require('../util/typecheck')
 
+router.get('/', (req, res) => {
+  res.send('product server')
+})
+
 router.get('/getProducts', async (req, res) => {
   const products = await db.getProducts()
 
