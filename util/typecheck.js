@@ -1,4 +1,4 @@
-function checkNumber(str) {
+function isNumber(str) {
   if (typeof str !== 'number') {
     const strAsNumber = Number.parseInt(str, 10)
     if (strAsNumber.toString().length !== str.length) {
@@ -11,4 +11,4 @@ function checkNumber(str) {
   return true
 }
 
-module.exports = { checkNumber }
+module.exports = { isNumber }

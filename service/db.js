@@ -1,6 +1,6 @@
 const database = require('mysql2-promise')()
 
-const sql = require('./sql')
+const sql = require('./sql.json')
 
 /**
  * database configure

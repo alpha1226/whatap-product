@@ -2,13 +2,29 @@ const express = require('express')
 
 const router = express.Router()
 const db = require('../service/db')
-const response = require('../service/response')
-const { checkNumber } = require('../util/typecheck')
+const { getOrders } = require('../service/order')
+const response = require('../util/response')
+const { isNumber } = require('../util/typecheck')
 
 router.get('/getProducts', async (req, res) => {
   const products = await db.getProducts()
 
   return response.json(res, products)
+})
+
+router.get('/getOrders/:productIndex', async (req, res) => {
+  const { productIndex } = req.params
+
+  if (productIndex === undefined) {
+    return response.badReq(res, '필수값이 없습니다')
+  }
+
+  if (!isNumber(productIndex)) {
+    return response.badReq(res, 'productIndex is not number')
+  }
+
+  const orders = await getOrders(Number.parseInt(productIndex, 10))
+  return res.json({ message: 'get orders', orders })
 })
 
 router.get('/getProduct/:productIndex', async (req, res) => {
@@ -17,7 +33,7 @@ router.get('/getProduct/:productIndex', async (req, res) => {
   if (!productIndex) {
     return response.badReq(res, '필수값이 없습니다')
   }
-  if (!checkNumber(productIndex)) {
+  if (!isNumber(productIndex)) {
     return response.badReq(res, 'productIndex is not number')
   }
 
@@ -50,7 +66,7 @@ router.post('/addProduct', async (req, res) => {
     return response.badReq(res, '필수값이 없습니다')
   }
 
-  if (!checkNumber(stock)) {
+  if (!isNumber(stock)) {
     return response.badReq(res, 'stock is not number')
   }
 
@@ -69,21 +85,25 @@ router.post('/addProduct', async (req, res) => {
 
 router.put('/updateProduct/:productIndex', async (req, res) => {
   const { productIndex } = req.params
-  const { name, content, stock } = req.query
-  let { available } = req.query
+  const { name, content, stock } = req.body
+  let { available } = req.body
 
-  if (!name || !content || !stock || !available) {
+  console.log(req.body)
+
+  if (!name || !content || stock === undefined || available === undefined) {
     return response.badReq(res, '필수값이 없습니다.')
   }
 
-  if (!checkNumber(stock)) {
+  if (!isNumber(stock)) {
     return response.badReq(res, 'stock is not number')
   }
-  if (!checkNumber(productIndex)) {
+  if (!isNumber(productIndex)) {
     return response.badReq(res, 'productIndex is not number')
   }
 
   try {
+    if (available === 0) available = false
+    if (available === 1) available = true
     available = JSON.parse(available)
     if (typeof available !== typeof true) {
       throw new Error('wrong type on available')
@@ -114,7 +134,7 @@ router.put('/updateProduct/:productIndex', async (req, res) => {
     )
   }
 
-  return response.json(updateResult)
+  return response.json(res, updateResult)
 })
 
 router.delete('/deleteProduct/:productIndex', async (req, res) => {
@@ -124,7 +144,7 @@ router.delete('/deleteProduct/:productIndex', async (req, res) => {
   if (!productIndex) {
     return response.badReq(res, '필수값이 없습니다')
   }
-  if (!checkNumber(productIndex)) {
+  if (!isNumber(productIndex)) {
     return response.badReq(res, 'productIndex is not number')
   }
 
