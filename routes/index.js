@@ -92,8 +92,6 @@ router.put('/updateProduct/:productIndex', async (req, res) => {
   const { name, content, stock } = req.body
   let { available } = req.body
 
-  console.log(req.body)
-
   if (!name || !content || stock === undefined || available === undefined) {
     return response.badReq(res, '필수값이 없습니다.')
   }
